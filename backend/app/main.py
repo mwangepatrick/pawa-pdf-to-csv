@@ -5,6 +5,7 @@ from pathlib import Path
 
 import aiosqlite
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
@@ -20,6 +21,11 @@ async def lifespan(app: FastAPI):
     async with init_db(config.DB_PATH) as conn:
         app.state.db = conn
         yield
+
+
+class EmailRequest(BaseModel):
+    job_id: str
+    email: str
 
 
 def create_app() -> FastAPI:
@@ -98,6 +104,29 @@ def create_app() -> FastAPI:
             filename=download_name,
             media_type="text/csv",
         )
+
+    @app.post("/api/email")
+    async def send_email(req: EmailRequest):
+        from app.email_service import send_download_email
+
+        job = await get_job(app.state.db, req.job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found.")
+        if job["status"] != "completed":
+            raise HTTPException(status_code=400, detail="Job is not completed yet.")
+
+        download_url = f"{config.DOWNLOAD_BASE_URL}/api/download/{job['download_token']}"
+        success = await send_download_email(
+            provider_name=config.EMAIL_PROVIDER,
+            api_key=config.EMAIL_API_KEY,
+            from_email=config.EMAIL_FROM,
+            to_email=req.email,
+            download_url=download_url,
+            filename=job["filename"],
+        )
+        if not success:
+            raise HTTPException(status_code=502, detail="Failed to send email.")
+        return {"sent": True}
 
     return app
 
