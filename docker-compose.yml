@@ -1,0 +1,33 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    env_file: .env
+    environment:
+      - DATA_DIR=/data
+    volumes:
+      - app-data:/data
+
+  cleanup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    env_file: .env
+    environment:
+      - DATA_DIR=/data
+    volumes:
+      - app-data:/data
+    entrypoint: ["sh", "-c", "while true; do python -m app.cleanup; sleep 3600; done"]
+
+volumes:
+  app-data:

@@ -4,3 +4,16 @@ __pycache__/
 .env
 *.csv
 *.pdf
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+
+# Data
+data/
+
+# Superpowers brainstorm sessions
+.superpowers/
