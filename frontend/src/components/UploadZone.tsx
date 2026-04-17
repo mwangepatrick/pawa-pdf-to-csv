@@ -17,19 +17,22 @@ export default function UploadZone({ onFileSelected, disabled }: UploadZoneProps
     if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
       return "Please select a PDF file.";
     }
+
     if (file.size > MAX_SIZE_BYTES) {
       return `File exceeds ${MAX_SIZE_MB}MB limit.`;
     }
+
     return null;
   }, []);
 
   const handleFile = useCallback(
     (file: File) => {
-      const err = validate(file);
-      if (err) {
-        setError(err);
+      const validationError = validate(file);
+      if (validationError) {
+        setError(validationError);
         return;
       }
+
       setError(null);
       onFileSelected(file);
     },
@@ -37,61 +40,42 @@ export default function UploadZone({ onFileSelected, disabled }: UploadZoneProps
   );
 
   const onDrop = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault();
+    (event: DragEvent) => {
+      event.preventDefault();
       setDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        handleFile(file);
+      }
     },
     [handleFile]
   );
 
-  const onDragOver = useCallback((e: DragEvent) => {
-    e.preventDefault();
+  const onDragOver = useCallback((event: DragEvent) => {
+    event.preventDefault();
     setDragOver(true);
   }, []);
 
   const onDragLeave = useCallback(() => setDragOver(false), []);
 
   const onChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        handleFile(file);
+      }
     },
     [handleFile]
   );
 
   return (
-    <div
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      style={{
-        border: `2px dashed ${dragOver ? "#2563eb" : "#555"}`,
-        borderRadius: 12,
-        padding: 48,
-        textAlign: "center",
-        background: dragOver ? "rgba(37, 99, 235, 0.05)" : "transparent",
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-        transition: "all 0.2s",
-      }}
-    >
-      <p style={{ fontSize: 18, marginBottom: 8 }}>
-        Drag & drop a PDF here
-      </p>
-      <p style={{ color: "#888", marginBottom: 16 }}>or</p>
-      <label
-        style={{
-          display: "inline-block",
-          padding: "10px 24px",
-          background: "#2563eb",
-          color: "white",
-          borderRadius: 6,
-          cursor: disabled ? "not-allowed" : "pointer",
-        }}
-      >
-        Browse Files
+    <div className={`upload-zone ${dragOver ? "upload-zone--active" : ""}`} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}>
+      <div className="upload-zone__eyebrow">Start here</div>
+      <p className="upload-zone__title">Drop a PDF to begin the conversion</p>
+      <p className="upload-zone__copy">We extract the table data and deliver the CSV by email once it is ready.</p>
+
+      <label className="primary-button upload-zone__button">
+        Browse PDFs
         <input
           type="file"
           accept=".pdf,application/pdf"
@@ -100,12 +84,10 @@ export default function UploadZone({ onFileSelected, disabled }: UploadZoneProps
           style={{ display: "none" }}
         />
       </label>
-      <p style={{ color: "#888", fontSize: 13, marginTop: 12 }}>
-        PDF files up to {MAX_SIZE_MB}MB
-      </p>
-      {error && (
-        <p style={{ color: "#ef4444", marginTop: 12 }}>{error}</p>
-      )}
+
+      <p className="upload-zone__meta">PDF files up to {MAX_SIZE_MB}MB</p>
+
+      {error ? <p className="upload-zone__error">{error}</p> : null}
     </div>
   );
 }

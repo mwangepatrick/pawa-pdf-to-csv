@@ -6,54 +6,31 @@ interface ProgressProps {
 
 export default function Progress({ filename, pagesProcessed, totalPages }: ProgressProps) {
   const hasPageInfo = totalPages !== null && totalPages > 0;
-  const pct = hasPageInfo && pagesProcessed !== null
-    ? Math.round((pagesProcessed / totalPages) * 100)
-    : null;
+  const currentPages = pagesProcessed ?? 0;
+  const progress = hasPageInfo ? Math.min(100, Math.round((currentPages / totalPages) * 100)) : null;
+  const pageLabel = hasPageInfo ? `${currentPages}/${totalPages}` : "processing";
 
   return (
-    <div style={{ textAlign: "center", padding: 48 }}>
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          border: "4px solid #333",
-          borderTop: "4px solid #2563eb",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          margin: "0 auto 24px",
-        }}
-      />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <p style={{ fontSize: 18, marginBottom: 8 }}>Converting {filename}...</p>
+    <div className="progress-card">
+      <div className="progress-orb" aria-hidden="true" />
+      <div className="progress-copy">Converting {filename}</div>
+      <p className="progress-message">The extractor is preparing the CSV. The finished file will be delivered by email.</p>
+
       {hasPageInfo ? (
         <>
-          <p style={{ color: "#888" }}>
-            Extracting tables from page {pagesProcessed ?? 0}/{totalPages}
-          </p>
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 300,
-              height: 6,
-              background: "#333",
-              borderRadius: 3,
-              margin: "16px auto 0",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${pct}%`,
-                height: "100%",
-                background: "#2563eb",
-                borderRadius: 3,
-                transition: "width 0.3s",
-              }}
-            />
+          <div className="progress-status">
+            <span>Pages processed</span>
+            <strong>{pageLabel}</strong>
+          </div>
+          <div className="progress-track" aria-label="Conversion progress">
+            <div className="progress-bar" style={{ width: `${progress}%` }} />
           </div>
         </>
       ) : (
-        <p style={{ color: "#888" }}>Processing...</p>
+        <div className="progress-status">
+          <span>Status</span>
+          <strong>Processing</strong>
+        </div>
       )}
     </div>
   );

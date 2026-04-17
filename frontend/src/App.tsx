@@ -3,13 +3,15 @@ import "./App.css";
 import UploadZone from "./components/UploadZone";
 import Progress from "./components/Progress";
 import Result from "./components/Result";
-import { uploadPdf, pollStatus } from "./api/client";
+import { uploadPdf, pollStatus, sendEmail } from "./api/client";
 import type { StatusResponse } from "./api/client";
+
+type EmailState = "idle" | "sending" | "sent" | "error";
 
 type AppState =
   | { step: "upload" }
   | { step: "processing"; jobId: string; filename: string; status: StatusResponse | null }
-  | { step: "result"; jobId: string; data: StatusResponse }
+  | { step: "result"; jobId: string; data: StatusResponse; emailState: EmailState }
   | { step: "error"; message: string; file?: File };
 
 export default function App() {
@@ -52,7 +54,7 @@ export default function App() {
         const status = await pollStatus(state.jobId);
         if (status.status === "completed") {
           stopPolling();
-          setState({ step: "result", jobId: state.jobId, data: status });
+          setState({ step: "result", jobId: state.jobId, data: status, emailState: "idle" });
         } else if (status.status === "failed") {
           stopPolling();
           setState({ step: "error", message: status.error || "Conversion failed", file: lastFileRef.current ?? undefined });
@@ -79,72 +81,112 @@ export default function App() {
     setState({ step: "upload" });
   }, [stopPolling]);
 
+  const activeJobId = state.step === "result" ? state.jobId : null;
+
+  const handleSendEmail = useCallback(
+    async (email: string, turnstileToken: string) => {
+      if (!activeJobId) {
+        throw new Error("No completed job is available for email delivery.");
+      }
+
+      setState((prev) =>
+        prev.step === "result" ? { ...prev, emailState: "sending" } : prev
+      );
+
+      try {
+        await sendEmail(activeJobId, email, turnstileToken);
+        setState((prev) =>
+          prev.step === "result" ? { ...prev, emailState: "sent" } : prev
+        );
+      } catch (err) {
+        setState((prev) =>
+          prev.step === "result" ? { ...prev, emailState: "error" } : prev
+        );
+        throw err;
+      }
+    },
+    [activeJobId]
+  );
+
   return (
-    <div className="app">
-      <h1>PDF to CSV</h1>
-      <p className="tagline">Extract tables from PDFs and convert them to CSV</p>
-
-      {state.step === "upload" && (
-        <UploadZone onFileSelected={handleFileSelected} />
-      )}
-
-      {state.step === "processing" && (
-        <Progress
-          filename={state.filename}
-          pagesProcessed={state.status?.pages_processed ?? null}
-          totalPages={state.status?.total_pages ?? null}
-        />
-      )}
-
-      {state.step === "result" && (
-        <Result
-          filename={state.data.filename}
-          downloadToken={state.data.download_token!}
-          rowCount={state.data.row_count!}
-          totalPages={state.data.total_pages!}
-          jobId={state.jobId}
-          onReset={handleReset}
-        />
-      )}
-
-      {state.step === "error" && (
-        <div style={{ textAlign: "center", padding: 48 }}>
-          <p style={{ color: "#ef4444", fontSize: 18, marginBottom: 16 }}>
-            {state.message}
+    <div className="app-shell">
+      <main className="app-layout">
+        <section className="hero-panel">
+          <p className="hero-kicker">PDF to CSV</p>
+          <h1 className="hero-title">PDF to CSV</h1>
+          <p className="hero-copy">
+            Upload a PDF, let the extractor do the work, and get the finished CSV delivered by email.
           </p>
-          {state.message.includes("No tables found") && state.file && (
-            <button
-              onClick={() => startUpload(state.file!, true)}
-              style={{
-                padding: "10px 24px",
-                background: "#2563eb",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                marginBottom: 12,
-              }}
-            >
-              Try Text Extraction Instead
-            </button>
+
+          <div className="hero-step-grid" aria-label="How it works">
+            <article className="hero-step">
+              <span className="hero-step-index">1</span>
+              <p className="hero-step-title">Upload the PDF</p>
+              <p className="hero-step-copy">Drop in a file up to 20MB and start the conversion.</p>
+            </article>
+            <article className="hero-step">
+              <span className="hero-step-index">2</span>
+              <p className="hero-step-title">We extract the tables</p>
+              <p className="hero-step-copy">Progress updates stay on one page while the job runs.</p>
+            </article>
+            <article className="hero-step">
+              <span className="hero-step-index">3</span>
+              <p className="hero-step-title">Delivered by email</p>
+              <p className="hero-step-copy">No download hunt. The completed CSV lands in your inbox.</p>
+            </article>
+          </div>
+
+          <p className="hero-note">Everything finishes here, but the file arrives in email.</p>
+        </section>
+
+        <section className="workspace-panel" aria-live="polite">
+          {state.step === "upload" && (
+            <UploadZone onFileSelected={handleFileSelected} />
           )}
-          <br />
-          <button
-            onClick={handleReset}
-            style={{
-              padding: "10px 24px",
-              background: "transparent",
-              color: "#888",
-              border: "1px solid #444",
-              borderRadius: 6,
-              cursor: "pointer",
-              marginTop: 8,
-            }}
-          >
-            Upload a Different File
-          </button>
-        </div>
-      )}
+
+          {state.step === "processing" && (
+            <Progress
+              filename={state.filename}
+              pagesProcessed={state.status?.pages_processed ?? null}
+              totalPages={state.status?.total_pages ?? null}
+            />
+          )}
+
+          {state.step === "result" && (
+            <Result
+              filename={state.data.filename}
+              rowCount={state.data.row_count ?? 0}
+              totalPages={state.data.total_pages ?? 0}
+              jobId={state.jobId}
+              emailState={state.emailState}
+              onReset={handleReset}
+              onSendEmail={handleSendEmail}
+            />
+          )}
+
+          {state.step === "error" && (
+            <div className="error-panel">
+              <div className="error-badge">Conversion stopped</div>
+              <h2>{state.message}</h2>
+              <p>
+                Try another PDF or rerun the same file with text extraction if the document is text-heavy.
+              </p>
+              {state.message.includes("No tables found") && state.file && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => startUpload(state.file!, true)}
+                >
+                  Try text extraction instead
+                </button>
+              )}
+              <button type="button" className="primary-button" onClick={handleReset}>
+                Upload a different file
+              </button>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

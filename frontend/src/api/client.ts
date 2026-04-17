@@ -9,7 +9,6 @@ export interface StatusResponse {
   filename: string;
   total_pages: number | null;
   pages_processed: number | null;
-  download_token?: string;
   row_count?: number;
   error?: string;
 }
@@ -41,15 +40,15 @@ export async function pollStatus(jobId: string): Promise<StatusResponse> {
   return res.json();
 }
 
-export function getDownloadUrl(token: string): string {
-  return `${API_BASE}/download/${token}`;
-}
-
-export async function sendEmail(jobId: string, email: string): Promise<EmailResponse> {
+export async function sendEmail(
+  jobId: string,
+  email: string,
+  turnstileToken: string
+): Promise<EmailResponse> {
   const res = await fetch(`${API_BASE}/email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ job_id: jobId, email }),
+    body: JSON.stringify({ job_id: jobId, email, turnstile_token: turnstileToken }),
   });
   if (!res.ok) {
     const err = await res.json();

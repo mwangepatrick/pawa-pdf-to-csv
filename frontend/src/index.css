@@ -1,20 +1,31 @@
 :root {
   color-scheme: dark;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
-  background: #0a0a0a;
-  color: #e0e0e0;
+  font-family: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.22), transparent 28%),
+    linear-gradient(180deg, #020617 0%, #020b18 45%, #040916 100%);
+  color: #e2e8f0;
 }
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 10vh;
+  margin: 0;
+  background: transparent;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
 }
