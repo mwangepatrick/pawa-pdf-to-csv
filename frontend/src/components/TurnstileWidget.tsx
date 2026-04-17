@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 type TurnstileRenderOptions = {
   sitekey: string;
@@ -34,6 +34,11 @@ const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render
 
 let scriptPromise: Promise<void> | null = null;
 
+function resetTurnstileScriptLoader() {
+  scriptPromise = null;
+  document.getElementById(SCRIPT_ID)?.remove();
+}
+
 function loadTurnstileScript() {
   if (window.turnstile) {
     return Promise.resolve();
@@ -59,6 +64,11 @@ function loadTurnstileScript() {
       script.onerror = () => reject(new Error("Failed to load Turnstile"));
       document.head.appendChild(script);
     });
+
+    scriptPromise = scriptPromise.catch((error) => {
+      resetTurnstileScriptLoader();
+      throw error;
+    });
   }
 
   return scriptPromise;
@@ -70,6 +80,15 @@ const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(functi
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const handleRetry = useCallback(() => {
+    setLoadState("loading");
+    setLoadError(null);
+    setRetryCount((current) => current + 1);
+  }, []);
 
   useImperativeHandle(
     ref,
@@ -109,8 +128,14 @@ const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(functi
           "expired-callback": () => onTokenChange(null),
           "error-callback": () => onTokenChange(null),
         });
+        if (!cancelled) {
+          setLoadState("ready");
+          setLoadError(null);
+        }
       } catch {
         if (!cancelled) {
+          setLoadState("error");
+          setLoadError("Verification is unavailable right now. Retry to load the challenge again.");
           onTokenChange(null);
         }
       }
@@ -125,7 +150,7 @@ const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(functi
       }
       widgetIdRef.current = null;
     };
-  }, [onTokenChange]);
+  }, [onTokenChange, retryCount]);
 
   if (!SITE_KEY) {
     return (
@@ -135,7 +160,25 @@ const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(functi
     );
   }
 
-  return <div ref={containerRef} className="turnstile-widget" />;
+  if (loadState === "error") {
+    return (
+      <div className="turnstile-placeholder turnstile-placeholder--error">
+        <p>{loadError ?? "Verification is unavailable right now."}</p>
+        <button type="button" className="secondary-button" onClick={handleRetry}>
+          Retry verification
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="turnstile-shell">
+      <div ref={containerRef} className="turnstile-widget" />
+      {loadState === "loading" ? (
+        <div className="turnstile-placeholder">Loading verification...</div>
+      ) : null}
+    </div>
+  );
 });
 
 export default TurnstileWidget;

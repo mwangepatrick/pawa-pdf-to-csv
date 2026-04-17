@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import TurnstileWidget, { type TurnstileHandle } from "./TurnstileWidget";
 
@@ -36,6 +36,13 @@ export default function Result({
       : emailState === "sending"
         ? "Sending..."
         : "Ready to email";
+
+  const handleTokenChange = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+    if (token) {
+      setSubmitError(null);
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,12 +127,7 @@ export default function Result({
 
         <TurnstileWidget
           ref={widgetRef}
-          onTokenChange={(token) => {
-            setTurnstileToken(token);
-            if (token) {
-              setSubmitError(null);
-            }
-          }}
+          onTokenChange={handleTokenChange}
         />
 
         {emailState === "sent" ? (
