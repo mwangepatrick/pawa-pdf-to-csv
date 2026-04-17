@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     pages_processed INTEGER DEFAULT 0,
     row_count INTEGER,
     error TEXT,
+    email_attempt_count INTEGER DEFAULT 0,
+    last_email_attempt_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_token ON jobs(download_token);
@@ -29,11 +31,23 @@ async def init_db(db_path: Path):
     conn = await aiosqlite.connect(str(db_path))
     conn.row_factory = aiosqlite.Row
     await conn.executescript(SCHEMA)
+    await _ensure_job_columns(conn)
     await conn.commit()
     try:
         yield conn
     finally:
         await conn.close()
+
+
+async def _ensure_job_columns(conn: aiosqlite.Connection) -> None:
+    cursor = await conn.execute("PRAGMA table_info(jobs)")
+    rows = await cursor.fetchall()
+    existing = {row["name"] for row in rows}
+
+    if "email_attempt_count" not in existing:
+        await conn.execute("ALTER TABLE jobs ADD COLUMN email_attempt_count INTEGER DEFAULT 0")
+    if "last_email_attempt_at" not in existing:
+        await conn.execute("ALTER TABLE jobs ADD COLUMN last_email_attempt_at TIMESTAMP")
 
 
 async def create_job(conn: aiosqlite.Connection, filename: str, upload_path: str) -> str:
@@ -88,6 +102,31 @@ async def get_job_by_token(conn: aiosqlite.Connection, token: str) -> dict | Non
     cursor = await conn.execute("SELECT * FROM jobs WHERE download_token = ?", (token,))
     row = await cursor.fetchone()
     return dict(row) if row else None
+
+
+async def reserve_email_attempt(
+    conn: aiosqlite.Connection,
+    job_id: str,
+    cooldown_seconds: int,
+    max_attempts: int,
+) -> bool:
+    cursor = await conn.execute(
+        """
+        UPDATE jobs
+        SET email_attempt_count = COALESCE(email_attempt_count, 0) + 1,
+            last_email_attempt_at = CURRENT_TIMESTAMP
+        WHERE job_id = ?
+          AND status = 'completed'
+          AND COALESCE(email_attempt_count, 0) < ?
+          AND (
+              last_email_attempt_at IS NULL
+              OR last_email_attempt_at <= datetime('now', ?)
+          )
+        """,
+        (job_id, max_attempts, f"-{cooldown_seconds} seconds"),
+    )
+    await conn.commit()
+    return cursor.rowcount == 1
 
 
 async def get_expired_jobs(conn: aiosqlite.Connection, expiry_hours: int = 24) -> list[dict]:

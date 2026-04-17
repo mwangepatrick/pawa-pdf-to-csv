@@ -92,5 +92,5 @@ async def test_upload_and_poll_until_complete(client, tmp_data_dir):
         await asyncio.sleep(0.5)
 
     assert data["status"] == "completed"
-    assert "download_token" in data
+    assert "download_token" not in data
     assert data["row_count"] >= 2

@@ -4,13 +4,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiosqlite
-from fastapi import FastAPI, File, HTTPException, UploadFile
+import httpx
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
 from app.converter import convert_pdf, is_valid_pdf
-from app.db import create_job, get_job, get_job_by_token, init_db, update_job_status
+from app.db import create_job, get_job, get_job_by_token, init_db, reserve_email_attempt, update_job_status
 
 
 @asynccontextmanager
@@ -26,6 +27,30 @@ async def lifespan(app: FastAPI):
 class EmailRequest(BaseModel):
     job_id: str
     email: str
+    turnstile_token: str
+
+
+async def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
+    if not config.TURNSTILE_SECRET_KEY:
+        return False
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                config.TURNSTILE_VERIFY_URL,
+                data={
+                    "secret": config.TURNSTILE_SECRET_KEY,
+                    "response": token,
+                    "remoteip": remote_ip or "",
+                },
+                timeout=10,
+            )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return False
+
+    return bool(payload.get("success"))
 
 
 def create_app() -> FastAPI:
@@ -74,7 +99,6 @@ def create_app() -> FastAPI:
             "pages_processed": job["pages_processed"],
         }
         if job["status"] == "completed":
-            result["download_token"] = job["download_token"]
             result["row_count"] = job["row_count"]
         if job["status"] == "failed":
             result["error"] = job["error"]
@@ -106,14 +130,28 @@ def create_app() -> FastAPI:
         )
 
     @app.post("/api/email")
-    async def send_email(req: EmailRequest):
+    async def send_email(req: EmailRequest, request: Request):
         from app.email_service import send_download_email
+
+        remote_ip = request.client.host if request.client else None
+        if not await verify_turnstile(req.turnstile_token, remote_ip=remote_ip):
+            raise HTTPException(status_code=400, detail="Turnstile verification failed.")
 
         job = await get_job(app.state.db, req.job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found.")
         if job["status"] != "completed":
             raise HTTPException(status_code=400, detail="Job is not completed yet.")
+        if not await reserve_email_attempt(
+            app.state.db,
+            req.job_id,
+            cooldown_seconds=config.EMAIL_SEND_COOLDOWN_SECONDS,
+            max_attempts=config.EMAIL_SEND_MAX_ATTEMPTS,
+        ):
+            job = await get_job(app.state.db, req.job_id)
+            if job and job["email_attempt_count"] >= config.EMAIL_SEND_MAX_ATTEMPTS:
+                raise HTTPException(status_code=429, detail="Email resend limit reached.")
+            raise HTTPException(status_code=429, detail="Please wait before requesting another email.")
 
         download_url = f"{config.DOWNLOAD_BASE_URL}/api/download/{job['download_token']}"
         success = await send_download_email(

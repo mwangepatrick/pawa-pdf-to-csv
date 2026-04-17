@@ -42,6 +42,12 @@ class EmailProvider:
             }
         raise ValueError(f"Unknown provider: {self.name}")
 
+    def build_request_kwargs(self, api_key: str, secret_key: str) -> dict:
+        kwargs = {"headers": self.build_headers(api_key)}
+        if self.name == "mailjet":
+            kwargs["auth"] = (api_key, secret_key)
+        return kwargs
+
 
 PROVIDERS = {
     "brevo": EmailProvider(
@@ -95,11 +101,8 @@ async def send_download_email(
     """
 
     payload = provider.build_payload(from_email, to_email, subject, html_body)
-    headers = provider.build_headers(api_key)
-
     async with httpx.AsyncClient() as client:
-        request_kwargs = {"json": payload, "headers": headers}
-        if provider_name == "mailjet":
-            request_kwargs["auth"] = (api_key, secret_key)
+        request_kwargs = provider.build_request_kwargs(api_key, secret_key)
+        request_kwargs["json"] = payload
         response = await client.post(provider.api_url, **request_kwargs)
         return response.status_code in (200, 201, 202)
