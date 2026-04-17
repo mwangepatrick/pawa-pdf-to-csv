@@ -30,9 +30,16 @@ class EmailProvider:
 
     def build_headers(self, api_key: str) -> dict:
         if self.name == "brevo":
-            return {"api-key": api_key, "Content-Type": "application/json"}
+            return {
+                "api-key": api_key,
+                "accept": "application/json",
+                "content-type": "application/json",
+            }
         elif self.name == "mailjet":
-            return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            return {
+                "accept": "application/json",
+                "content-type": "application/json",
+            }
         raise ValueError(f"Unknown provider: {self.name}")
 
 
@@ -60,12 +67,16 @@ def get_email_provider(name: str) -> EmailProvider:
 async def send_download_email(
     provider_name: str,
     api_key: str,
+    secret_key: str,
     from_email: str,
     to_email: str,
     download_url: str,
     filename: str,
 ) -> bool:
     provider = get_email_provider(provider_name)
+
+    if provider_name == "mailjet" and not secret_key:
+        raise ValueError("EMAIL_SECRET_KEY is required for Mailjet.")
 
     subject = "Your CSV is ready to download"
     html_body = f"""
@@ -87,5 +98,8 @@ async def send_download_email(
     headers = provider.build_headers(api_key)
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(provider.api_url, json=payload, headers=headers)
+        request_kwargs = {"json": payload, "headers": headers}
+        if provider_name == "mailjet":
+            request_kwargs["auth"] = (api_key, secret_key)
+        response = await client.post(provider.api_url, **request_kwargs)
         return response.status_code in (200, 201, 202)

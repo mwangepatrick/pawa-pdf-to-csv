@@ -41,6 +41,8 @@ npm run dev
 
 Visit **http://localhost:5173**
 
+The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first.
+
 ### Run with Docker (production)
 
 ```bash
@@ -72,8 +74,15 @@ See `.env.example` for all available settings:
 |----------|---------|-------------|
 | `EMAIL_PROVIDER` | `brevo` | `brevo` or `mailjet` |
 | `EMAIL_API_KEY` | — | API key for the email provider |
+| `EMAIL_SECRET_KEY` | — | Mailjet secret key; leave blank for Brevo |
 | `EMAIL_FROM` | `noreply@example.com` | Sender email address |
 | `ALLOWED_ORIGINS` | `http://localhost:5173` | CORS allowed origins (comma-separated) |
 | `DOWNLOAD_BASE_URL` | `http://localhost:8000` | Base URL for download links in emails |
 | `MAX_UPLOAD_SIZE_MB` | `20` | Max upload file size |
 | `FILE_EXPIRY_HOURS` | `24` | Hours before files are cleaned up |
+
+### Email provider notes
+
+- Brevo uses `EMAIL_API_KEY` plus a verified sender in `EMAIL_FROM`.
+- Mailjet uses `EMAIL_API_KEY` plus `EMAIL_SECRET_KEY` with HTTP Basic Auth.
+- If you switch providers, restart the backend so it picks up the new environment values.

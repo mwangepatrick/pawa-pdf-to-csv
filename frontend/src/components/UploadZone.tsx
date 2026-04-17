@@ -1,4 +1,5 @@
-import { useCallback, useState, DragEvent, ChangeEvent } from "react";
+import { useCallback, useState } from "react";
+import type { DragEvent, ChangeEvent } from "react";
 
 interface UploadZoneProps {
   onFileSelected: (file: File) => void;

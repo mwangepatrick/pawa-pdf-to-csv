@@ -3,7 +3,8 @@ import "./App.css";
 import UploadZone from "./components/UploadZone";
 import Progress from "./components/Progress";
 import Result from "./components/Result";
-import { uploadPdf, pollStatus, StatusResponse } from "./api/client";
+import { uploadPdf, pollStatus } from "./api/client";
+import type { StatusResponse } from "./api/client";
 
 type AppState =
   | { step: "upload" }

@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 
+from dotenv import find_dotenv, load_dotenv
+
+load_dotenv(find_dotenv(usecwd=True), override=False)
+
 BASE_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parent.parent.parent / "data"))
 UPLOAD_DIR = BASE_DIR / "uploads"
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -12,6 +16,7 @@ FILE_EXPIRY_HOURS = int(os.getenv("FILE_EXPIRY_HOURS", "24"))
 
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "brevo")
 EMAIL_API_KEY = os.getenv("EMAIL_API_KEY", "")
+EMAIL_SECRET_KEY = os.getenv("EMAIL_SECRET_KEY", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")

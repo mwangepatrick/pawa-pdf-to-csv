@@ -17,6 +17,18 @@ import pandas as pd
 from pathlib import Path
 
 
+MPESA_SUMMARY_LABELS = {
+    "SEND MONEY:",
+    "RECEIVED MONEY:",
+    "AGENT DEPOSIT:",
+    "AGENT WITHDRAWAL:",
+    "LIPA NA M-PESA (PAYBILL):",
+    "LIPA NA M-PESA (BUY GOODS):",
+    "OTHERS:",
+    "TOTAL:",
+}
+
+
 def extract_tables(pdf_path: str) -> list[pd.DataFrame]:
     """Extract all tables from all pages of the PDF."""
     frames = []
@@ -55,6 +67,34 @@ def save_csv(df: pd.DataFrame, output_path: str) -> None:
     df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
 
+def is_mpesa_statement(pdf_path: Path) -> bool:
+    normalized_name = pdf_path.name.lower().replace("_", " ").replace("-", " ")
+    return "mpesa statement" in normalized_name
+
+
+def clean_mpesa_statement(df: pd.DataFrame) -> pd.DataFrame:
+    cleaned = df.copy()
+
+    if "TRANSACTION TYPE" in cleaned.columns:
+        cleaned = cleaned[~cleaned["TRANSACTION TYPE"].isin(MPESA_SUMMARY_LABELS)]
+
+    drop_columns = [
+        column
+        for column in cleaned.columns
+        if column in {"_page", "TRANSACTION TYPE", "PAID IN", "PAID OUT"}
+        or "statement verification code" in str(column).lower()
+        or "to verify the validity" in str(column).lower()
+    ]
+    cleaned = cleaned.drop(columns=drop_columns)
+
+    for column in cleaned.select_dtypes(include=["object", "string"]).columns:
+        cleaned[column] = cleaned[column].map(
+            lambda value: " ".join(str(value).split()) if pd.notna(value) else value
+        )
+
+    return cleaned.reset_index(drop=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Convert PDF tables to CSV")
     parser.add_argument("input", help="Path to the input PDF file")
@@ -78,6 +118,8 @@ def main():
 
     if tables:
         combined = pd.concat(tables, ignore_index=True)
+        if is_mpesa_statement(pdf_path):
+            combined = clean_mpesa_statement(combined)
         save_csv(combined, str(output_path))
         print(f"Extracted {len(tables)} table(s), {len(combined)} rows -> {output_path}")
     elif args.text_fallback:

@@ -119,6 +119,7 @@ def create_app() -> FastAPI:
         success = await send_download_email(
             provider_name=config.EMAIL_PROVIDER,
             api_key=config.EMAIL_API_KEY,
+            secret_key=config.EMAIL_SECRET_KEY,
             from_email=config.EMAIL_FROM,
             to_email=req.email,
             download_url=download_url,

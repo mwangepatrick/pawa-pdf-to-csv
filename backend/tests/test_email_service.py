@@ -31,6 +31,7 @@ async def test_send_download_email_brevo():
         result = await send_download_email(
             provider_name="brevo",
             api_key="test-key",
+            secret_key="",
             from_email="noreply@example.com",
             to_email="user@example.com",
             download_url="https://example.com/api/download/abc123",
@@ -38,3 +39,42 @@ async def test_send_download_email_brevo():
         )
         assert result is True
         mock_client.post.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_send_download_email_mailjet_uses_basic_auth():
+    with patch("app.email_service.httpx.AsyncClient") as MockClient:
+        mock_client = AsyncMock()
+        mock_client.post.return_value = AsyncMock(status_code=200)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        MockClient.return_value = mock_client
+
+        result = await send_download_email(
+            provider_name="mailjet",
+            api_key="test-key",
+            secret_key="test-secret",
+            from_email="noreply@example.com",
+            to_email="user@example.com",
+            download_url="https://example.com/api/download/abc123",
+            filename="report.pdf",
+        )
+
+        assert result is True
+        mock_client.post.assert_called_once()
+        _, kwargs = mock_client.post.call_args
+        assert kwargs["auth"] == ("test-key", "test-secret")
+
+
+@pytest.mark.asyncio
+async def test_send_download_email_mailjet_requires_secret_key():
+    with pytest.raises(ValueError, match="EMAIL_SECRET_KEY is required for Mailjet"):
+        await send_download_email(
+            provider_name="mailjet",
+            api_key="test-key",
+            secret_key="",
+            from_email="noreply@example.com",
+            to_email="user@example.com",
+            download_url="https://example.com/api/download/abc123",
+            filename="report.pdf",
+        )
