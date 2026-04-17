@@ -18,6 +18,7 @@ This is a product and UX change first, with a supporting backend enforcement cha
 - Remove direct download affordances from the frontend.
 - Keep progress and result states visible after upload.
 - Preserve the existing email-send flow, but make it the only delivery path surfaced to users.
+- Add Cloudflare Turnstile to the email-send form only.
 - Add a branded landing page with stronger visual identity and clearer messaging.
 - Update backend responses so the frontend never needs the download token.
 - Keep the experience uninterrupted: upload, progress, result, email confirmation.
@@ -74,6 +75,7 @@ The result state should show:
 - Pages processed
 - Email delivery status
 - Retry / resend controls if email fails
+- A Turnstile challenge before sending or resending email
 
 The result state should not show:
 
@@ -144,7 +146,7 @@ Expected behavior:
 
 - `/api/upload` still returns job metadata and processing state.
 - `/api/status/{job_id}` returns progress and completion details, but not a direct download token.
-- `/api/email` remains the mechanism that sends the download link to the user.
+- `/api/email` remains the mechanism that sends the download link to the user and must validate a Turnstile token before sending.
 - `/api/download/{token}` remains available for emailed links, but the token must not be surfaced in the UI.
 
 ### Enforcement rule
@@ -162,6 +164,8 @@ If the user supplies an email address early, the app should send the CSV link wh
 If the user does not supply an email address upfront, the result view should ask for it without forcing the user to re-upload.
 
 The email form should feel like part of the completion state, not a separate interruption.
+
+Before email submission, the user must complete Cloudflare Turnstile verification. This applies only to the email-send action and does not gate upload or conversion.
 
 ## Accessibility And UX Quality
 
@@ -189,6 +193,7 @@ Error states should keep the job context visible so the user can retry without s
 - Verify status responses do not expose the download token to the frontend.
 - Verify the email route still sends a usable download link.
 - Verify the download route remains functional for emailed tokens only.
+- Verify the email route rejects missing or invalid Turnstile tokens.
 
 ### Frontend tests
 
@@ -196,6 +201,7 @@ Error states should keep the job context visible so the user can retry without s
 - Verify the result screen does not render any direct download link.
 - Verify the result screen can send or resend the email.
 - Verify the progress state still renders while conversion is in flight.
+- Verify the email form includes Turnstile and blocks submission until it is solved.
 
 ### Manual checks
 
@@ -212,6 +218,7 @@ Error states should keep the job context visible so the user can retry without s
 - The CSV is available to the user only through email delivery.
 - The landing page looks intentionally branded and polished.
 - The flow still works if the user enters email after conversion completes.
+- The email-send action is protected by Cloudflare Turnstile.
 - The backend and frontend tests cover the no-direct-download behavior.
 
 ## Rollout Notes
