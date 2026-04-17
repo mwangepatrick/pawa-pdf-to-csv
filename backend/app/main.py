@@ -31,7 +31,8 @@ class EmailRequest(BaseModel):
 
 
 async def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
-    if not config.TURNSTILE_SECRET_KEY:
+    secret_key = config.TURNSTILE_SECRET_KEY_OVERRIDE if config.TURNSTILE_SITE_KEY_OVERRIDE else config.TURNSTILE_SECRET_KEY
+    if not secret_key:
         return False
 
     try:
@@ -39,7 +40,7 @@ async def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
             response = await client.post(
                 config.TURNSTILE_VERIFY_URL,
                 data={
-                    "secret": config.TURNSTILE_SECRET_KEY,
+                    "secret": secret_key,
                     "response": token,
                     "remoteip": remote_ip or "",
                 },

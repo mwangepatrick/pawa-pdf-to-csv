@@ -43,7 +43,7 @@ Visit **http://localhost:5173**
 
 The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first.
 
-For local Turnstile testing on **http://localhost:5173/**, keep your production site key in `TURNSTILE_SITE_KEY` and set `TURNSTILE_SITE_KEY_OVERRIDE` to Cloudflare's test key or a local-dev-allowed site key. The frontend uses the override in development and test mode, while production builds still require the real site key.
+For local Turnstile testing on **http://localhost:5173/**, keep your production site key in `TURNSTILE_SITE_KEY` and set `TURNSTILE_SITE_KEY_OVERRIDE` to Cloudflare's test key or a local-dev-allowed site key. Set `TURNSTILE_SECRET_KEY_OVERRIDE` to the matching local/test secret. The frontend uses the override in development and test mode, while production builds still require the real site key.
 
 ### Run with Docker (production)
 
@@ -81,7 +81,9 @@ See `.env.example` for all available settings:
 | `EMAIL_SECRET_KEY` | — | Mailjet secret key; leave blank for Brevo |
 | `EMAIL_FROM` | `noreply@example.com` | Sender email address |
 | `TURNSTILE_SITE_KEY` | — | Public Cloudflare Turnstile site key used by the browser |
+| `TURNSTILE_SITE_KEY_OVERRIDE` | — | Optional local/dev Turnstile site key override for localhost testing |
 | `TURNSTILE_SECRET_KEY` | — | Private Cloudflare Turnstile secret key used only by the backend |
+| `TURNSTILE_SECRET_KEY_OVERRIDE` | — | Optional local/dev Turnstile secret matching the site-key override |
 | `TURNSTILE_VERIFY_URL` | `https://challenges.cloudflare.com/turnstile/v0/siteverify` | Turnstile verification endpoint |
 | `EMAIL_SEND_COOLDOWN_SECONDS` | `60` | Minimum seconds between email sends for a job |
 | `EMAIL_SEND_MAX_ATTEMPTS` | `5` | Maximum email send attempts allowed for a job |
@@ -95,7 +97,7 @@ See `.env.example` for all available settings:
 - Brevo uses `EMAIL_API_KEY` plus a verified sender in `EMAIL_FROM`.
 - Mailjet uses `EMAIL_API_KEY` plus `EMAIL_SECRET_KEY` with HTTP Basic Auth.
 - `TURNSTILE_SITE_KEY` is safe to expose to the frontend; `TURNSTILE_SECRET_KEY` must remain server-side only.
-- For local dev/test, set `TURNSTILE_SITE_KEY_OVERRIDE` in `D:\cp\tools\pdf-csv\.env` so the widget works on `http://localhost:5173/` without changing the production key.
+- For local dev/test, set `TURNSTILE_SITE_KEY_OVERRIDE` and `TURNSTILE_SECRET_KEY_OVERRIDE` in `D:\cp\tools\pdf-csv\.env` so the widget works on `http://localhost:5173/` without changing the production keys.
 - If you build with Docker Compose, only the public site key is forwarded to the frontend build. `TURNSTILE_SECRET_KEY` stays in the backend service and is not baked into the frontend image.
 - Email sending is Turnstile-protected, and the completed CSV is delivered only through email.
 - Email sending should fail closed if Turnstile validation is unavailable or fails.

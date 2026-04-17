@@ -19,7 +19,9 @@ EMAIL_API_KEY = os.getenv("EMAIL_API_KEY", "")
 EMAIL_SECRET_KEY = os.getenv("EMAIL_SECRET_KEY", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
 TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
+TURNSTILE_SITE_KEY_OVERRIDE = os.getenv("TURNSTILE_SITE_KEY_OVERRIDE", "")
 TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_SECRET_KEY_OVERRIDE = os.getenv("TURNSTILE_SECRET_KEY_OVERRIDE", "")
 TURNSTILE_VERIFY_URL = os.getenv(
     "TURNSTILE_VERIFY_URL",
     "https://challenges.cloudflare.com/turnstile/v0/siteverify",

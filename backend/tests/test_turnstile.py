@@ -3,8 +3,9 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, patch
 
+from app import config
 from app.db import create_job, update_job_status
-from app.main import create_app
+from app.main import create_app, verify_turnstile
 
 
 @pytest_asyncio.fixture
@@ -45,6 +46,42 @@ async def test_email_rejects_invalid_turnstile_token(client):
         )
     assert response.status_code == 400
     assert response.json()["detail"] == "Turnstile verification failed."
+
+
+@pytest.mark.asyncio
+async def test_verify_turnstile_uses_override_secret(monkeypatch):
+    monkeypatch.setattr(config, "TURNSTILE_SITE_KEY_OVERRIDE", "test-site-key")
+    monkeypatch.setattr(config, "TURNSTILE_SECRET_KEY_OVERRIDE", "override-secret")
+    monkeypatch.setattr(config, "TURNSTILE_SECRET_KEY", "production-secret")
+
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"success": True}
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, data, timeout):
+            captured["url"] = url
+            captured["data"] = data
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+    with patch("app.main.httpx.AsyncClient", return_value=FakeClient()):
+        assert await verify_turnstile("token-123", remote_ip="127.0.0.1") is True
+
+    assert captured["data"]["secret"] == "override-secret"
+    assert captured["data"]["response"] == "token-123"
+    assert captured["data"]["remoteip"] == "127.0.0.1"
 
 
 @pytest.mark.asyncio
