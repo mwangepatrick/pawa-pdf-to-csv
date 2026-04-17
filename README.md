@@ -21,7 +21,7 @@ python pdf_to_csv.py report.pdf --text-fallback
 
 ## Web UI
 
-A browser-based interface where users upload a PDF, get a CSV download, and can optionally email the download link.
+A browser-based interface where users upload a PDF, wait for Turnstile verification, and receive the finished CSV only by email. The UI does not expose a direct CSV download action.
 
 ### Run locally (development)
 
@@ -41,7 +41,7 @@ npm run dev
 
 Visit **http://localhost:5173**
 
-The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first.
+The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first. The frontend also reads the public Turnstile site key from the repo-root environment during local development, so keeping `TURNSTILE_SITE_KEY` in the root `.env` is enough for the widget to render.
 
 ### Run with Docker (production)
 
@@ -56,6 +56,8 @@ docker compose up -d
 Visit **http://localhost**
 
 Three services run: Nginx (serves frontend + proxies API), FastAPI (backend), and a cleanup cron (deletes expired files every hour).
+
+The frontend build only needs the public Turnstile site key. Docker Compose forwards `TURNSTILE_SITE_KEY` into the frontend build as `VITE_TURNSTILE_SITE_KEY`; the backend secret stays in the API container and never goes into the frontend image.
 
 ### Run backend tests
 
@@ -91,5 +93,8 @@ See `.env.example` for all available settings:
 - Brevo uses `EMAIL_API_KEY` plus a verified sender in `EMAIL_FROM`.
 - Mailjet uses `EMAIL_API_KEY` plus `EMAIL_SECRET_KEY` with HTTP Basic Auth.
 - `TURNSTILE_SITE_KEY` is safe to expose to the frontend; `TURNSTILE_SECRET_KEY` must remain server-side only.
+- The browser reads the public site key from the repo-root environment during local development. Keep `TURNSTILE_SITE_KEY` in `D:\cp\tools\pdf-csv\.env` and start the frontend from `frontend/` without copying backend secrets into the client app.
+- If you build with Docker Compose, only the public site key is forwarded to the frontend build. `TURNSTILE_SECRET_KEY` stays in the backend service and is not baked into the frontend image.
+- Email sending is Turnstile-protected, and the completed CSV is delivered only through email.
 - Email sending should fail closed if Turnstile validation is unavailable or fails.
 - If you switch providers, restart the backend so it picks up the new environment values.
