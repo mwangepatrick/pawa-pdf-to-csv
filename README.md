@@ -41,7 +41,9 @@ npm run dev
 
 Visit **http://localhost:5173**
 
-The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first. The frontend also reads the public Turnstile site key from the repo-root environment during local development, so keeping `TURNSTILE_SITE_KEY` in the root `.env` is enough for the widget to render.
+The backend auto-loads a root-level `.env` file when it starts, so you can keep local email/API settings in `D:\cp\tools\pdf-csv\.env` and run `uvicorn` directly without exporting variables first.
+
+For local Turnstile testing on **http://localhost:5173/**, keep your production site key in `TURNSTILE_SITE_KEY` and set `TURNSTILE_SITE_KEY_OVERRIDE` to Cloudflare's test key or a local-dev-allowed site key. The frontend uses the override in development and test mode, while production builds still require the real site key.
 
 ### Run with Docker (production)
 
@@ -93,7 +95,7 @@ See `.env.example` for all available settings:
 - Brevo uses `EMAIL_API_KEY` plus a verified sender in `EMAIL_FROM`.
 - Mailjet uses `EMAIL_API_KEY` plus `EMAIL_SECRET_KEY` with HTTP Basic Auth.
 - `TURNSTILE_SITE_KEY` is safe to expose to the frontend; `TURNSTILE_SECRET_KEY` must remain server-side only.
-- The browser reads the public site key from the repo-root environment during local development. Keep `TURNSTILE_SITE_KEY` in `D:\cp\tools\pdf-csv\.env` and start the frontend from `frontend/` without copying backend secrets into the client app.
+- For local dev/test, set `TURNSTILE_SITE_KEY_OVERRIDE` in `D:\cp\tools\pdf-csv\.env` so the widget works on `http://localhost:5173/` without changing the production key.
 - If you build with Docker Compose, only the public site key is forwarded to the frontend build. `TURNSTILE_SECRET_KEY` stays in the backend service and is not baked into the frontend image.
 - Email sending is Turnstile-protected, and the completed CSV is delivered only through email.
 - Email sending should fail closed if Turnstile validation is unavailable or fails.

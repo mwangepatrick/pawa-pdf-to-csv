@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
   const frontendPublicTurnstileEnv = loadEnv(mode, frontendDir, "VITE_TURNSTILE_");
   const rootTurnstileEnv = loadEnv(mode, repoRootDir, "TURNSTILE_");
   const rootPublicTurnstileEnv = loadEnv(mode, repoRootDir, "VITE_TURNSTILE_");
+  const devOverrideSiteKey =
+    frontendTurnstileEnv.TURNSTILE_SITE_KEY_OVERRIDE ||
+    frontendPublicTurnstileEnv.VITE_TURNSTILE_SITE_KEY_OVERRIDE ||
+    rootTurnstileEnv.TURNSTILE_SITE_KEY_OVERRIDE ||
+    rootPublicTurnstileEnv.VITE_TURNSTILE_SITE_KEY_OVERRIDE ||
+    process.env.VITE_TURNSTILE_SITE_KEY_OVERRIDE ||
+    process.env.TURNSTILE_SITE_KEY_OVERRIDE ||
+    "";
   const turnstileSiteKey =
     runtimeTurnstileSiteKey ||
     frontendTurnstileEnv.TURNSTILE_SITE_KEY ||
@@ -21,16 +29,18 @@ export default defineConfig(({ mode }) => {
     rootPublicTurnstileEnv.VITE_TURNSTILE_SITE_KEY ||
     "";
 
-  if (!turnstileSiteKey) {
+  const resolvedTurnstileSiteKey = mode === "development" || mode === "test" ? devOverrideSiteKey || turnstileSiteKey : turnstileSiteKey;
+
+  if (!resolvedTurnstileSiteKey) {
     throw new Error(
-      "TURNSTILE_SITE_KEY is required to build the frontend. Set it in the root .env or pass VITE_TURNSTILE_SITE_KEY or TURNSTILE_SITE_KEY for local-only overrides.",
+      "TURNSTILE_SITE_KEY is required to build the frontend. Set it in the root .env or pass TURNSTILE_SITE_KEY_OVERRIDE for local dev/test overrides.",
     );
   }
 
   return {
     plugins: [react()],
     define: {
-      "import.meta.env.VITE_TURNSTILE_SITE_KEY": JSON.stringify(turnstileSiteKey),
+      "import.meta.env.VITE_TURNSTILE_SITE_KEY": JSON.stringify(resolvedTurnstileSiteKey),
     },
     server: {
       proxy: {
