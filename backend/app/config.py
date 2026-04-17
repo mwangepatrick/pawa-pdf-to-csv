@@ -18,6 +18,14 @@ EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "brevo")
 EMAIL_API_KEY = os.getenv("EMAIL_API_KEY", "")
 EMAIL_SECRET_KEY = os.getenv("EMAIL_SECRET_KEY", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
+TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_VERIFY_URL = os.getenv(
+    "TURNSTILE_VERIFY_URL",
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+)
+EMAIL_SEND_COOLDOWN_SECONDS = int(os.getenv("EMAIL_SEND_COOLDOWN_SECONDS", "60"))
+EMAIL_SEND_MAX_ATTEMPTS = int(os.getenv("EMAIL_SEND_MAX_ATTEMPTS", "5"))
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 

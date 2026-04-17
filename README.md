@@ -76,6 +76,11 @@ See `.env.example` for all available settings:
 | `EMAIL_API_KEY` | — | API key for the email provider |
 | `EMAIL_SECRET_KEY` | — | Mailjet secret key; leave blank for Brevo |
 | `EMAIL_FROM` | `noreply@example.com` | Sender email address |
+| `TURNSTILE_SITE_KEY` | — | Public Cloudflare Turnstile site key used by the browser |
+| `TURNSTILE_SECRET_KEY` | — | Private Cloudflare Turnstile secret key used only by the backend |
+| `TURNSTILE_VERIFY_URL` | `https://challenges.cloudflare.com/turnstile/v0/siteverify` | Turnstile verification endpoint |
+| `EMAIL_SEND_COOLDOWN_SECONDS` | `60` | Minimum seconds between email sends for a job |
+| `EMAIL_SEND_MAX_ATTEMPTS` | `5` | Maximum email send attempts allowed for a job |
 | `ALLOWED_ORIGINS` | `http://localhost:5173` | CORS allowed origins (comma-separated) |
 | `DOWNLOAD_BASE_URL` | `http://localhost:8000` | Base URL for download links in emails |
 | `MAX_UPLOAD_SIZE_MB` | `20` | Max upload file size |
@@ -85,4 +90,6 @@ See `.env.example` for all available settings:
 
 - Brevo uses `EMAIL_API_KEY` plus a verified sender in `EMAIL_FROM`.
 - Mailjet uses `EMAIL_API_KEY` plus `EMAIL_SECRET_KEY` with HTTP Basic Auth.
+- `TURNSTILE_SITE_KEY` is safe to expose to the frontend; `TURNSTILE_SECRET_KEY` must remain server-side only.
+- Email sending should fail closed if Turnstile validation is unavailable or fails.
 - If you switch providers, restart the backend so it picks up the new environment values.

@@ -39,3 +39,12 @@ def test_config_loads_dotenv_from_parent_directory(tmp_path, monkeypatch):
     assert reloaded.EMAIL_FROM == "sender@example.com"
     assert reloaded.ALLOWED_ORIGINS == ["http://localhost:3000"]
     assert reloaded.DOWNLOAD_BASE_URL == "http://localhost:9000"
+
+
+def test_config_exposes_turnstile_and_throttle_settings():
+    import app.config as config
+
+    assert hasattr(config, "TURNSTILE_SECRET_KEY")
+    assert hasattr(config, "TURNSTILE_VERIFY_URL")
+    assert hasattr(config, "EMAIL_SEND_COOLDOWN_SECONDS")
+    assert hasattr(config, "EMAIL_SEND_MAX_ATTEMPTS")
