@@ -37,6 +37,7 @@
       --mpesa-card: rgba(0, 0, 0, 0.25);
       --step-bg: #0f1a2e;
       --step-border: rgba(167, 139, 250, 0.12);
+      --mpesa-row-divider: rgba(255, 255, 255, 0.03);
     }
 
     [data-theme="light"] {
@@ -45,6 +46,8 @@
       --text: #0f172a;
       --text2: #475569;
       --text3: #94a3b8;
+      --accent: #a78bfa;
+      --accent2: #7c3aed;
       --glow: rgba(167, 139, 250, 0.12);
       --section-border: rgba(0, 0, 0, 0.06);
       --toggle-bg: rgba(0, 0, 0, 0.04);
@@ -57,6 +60,7 @@
       --mpesa-card: rgba(0, 0, 0, 0.04);
       --step-bg: #ffffff;
       --step-border: rgba(124, 58, 237, 0.1);
+      --mpesa-row-divider: rgba(0, 0, 0, 0.05);
     }
 
     /* ── Reset & Base ── */
@@ -367,7 +371,7 @@
       font-size: 9px;
       color: var(--mpesa-sub);
       padding: 5px 6px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--mpesa-row-divider);
     }
     .mpesa-table tr.removed td { text-decoration: line-through; opacity: 0.3; }
     .mpesa-caption { margin-top: 10px; font-size: 9px; color: var(--mpesa-text); opacity: 0.6; }
@@ -395,7 +399,7 @@
 </head>
 <body>
 
-  <button class="theme-toggle" id="themeToggle">☀ Light</button>
+  <button type="button" class="theme-toggle" id="themeToggle">☀ Light</button>
 
   <!-- HERO -->
   <section class="hero">
@@ -403,7 +407,7 @@
     <div class="brand-divider"></div>
     <div class="hero-tagline">Drop your PDF.<br>Get your data.</div>
     <p class="hero-sub">Instant table extraction from any PDF — cleaned, formatted, and delivered as CSV to your inbox.</p>
-    <button class="hero-cta" onclick="document.getElementById('tool').scrollIntoView({behavior:'smooth'})">Start converting ↓</button>
+    <button type="button" class="hero-cta">Start converting ↓</button>
     <div class="trust-badges">
       <span class="trust-badge">No account needed</span>
       <span class="trust-badge">Free to use</span>
@@ -503,6 +507,10 @@
 
     toggle.addEventListener('click', function () {
       setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    });
+
+    document.querySelector('.hero-cta').addEventListener('click', function () {
+      document.getElementById('tool').scrollIntoView({ behavior: 'smooth' });
     });
   </script>
 
