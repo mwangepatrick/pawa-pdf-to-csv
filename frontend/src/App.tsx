@@ -109,84 +109,52 @@ export default function App() {
   );
 
   return (
-    <div className="app-shell">
-      <main className="app-layout">
-        <section className="hero-panel">
-          <p className="hero-kicker">PDF to CSV</p>
-          <h1 className="hero-title">PDF to CSV</h1>
-          <p className="hero-copy">
-            Upload a PDF, let the extractor do the work, and get the finished CSV delivered by email.
+    <section className="workspace-panel" aria-live="polite">
+      {state.step === "upload" && (
+        <UploadZone onFileSelected={handleFileSelected} />
+      )}
+
+      {state.step === "processing" && (
+        <Progress
+          filename={state.filename}
+          pagesProcessed={state.status?.pages_processed ?? null}
+          totalPages={state.status?.total_pages ?? null}
+        />
+      )}
+
+      {state.step === "result" && (
+        <Result
+          filename={state.data.filename}
+          rowCount={state.data.row_count ?? 0}
+          totalPages={state.data.total_pages ?? 0}
+          jobId={state.jobId}
+          emailState={state.emailState}
+          onReset={handleReset}
+          onSendEmail={handleSendEmail}
+        />
+      )}
+
+      {state.step === "error" && (
+        <div className="error-panel">
+          <div className="error-badge">Conversion stopped</div>
+          <h2>{state.message}</h2>
+          <p>
+            Try another PDF or rerun the same file with text extraction if the document is text-heavy.
           </p>
-
-          <div className="hero-step-grid" aria-label="How it works">
-            <article className="hero-step">
-              <span className="hero-step-index">1</span>
-              <p className="hero-step-title">Upload the PDF</p>
-              <p className="hero-step-copy">Drop in a file up to 20MB and start the conversion.</p>
-            </article>
-            <article className="hero-step">
-              <span className="hero-step-index">2</span>
-              <p className="hero-step-title">We extract the tables</p>
-              <p className="hero-step-copy">Progress updates stay on one page while the job runs.</p>
-            </article>
-            <article className="hero-step">
-              <span className="hero-step-index">3</span>
-              <p className="hero-step-title">Delivered by email</p>
-              <p className="hero-step-copy">No download hunt. The completed CSV lands in your inbox.</p>
-            </article>
-          </div>
-
-          <p className="hero-note">Everything finishes here, but the file arrives in email.</p>
-        </section>
-
-        <section className="workspace-panel" aria-live="polite">
-          {state.step === "upload" && (
-            <UploadZone onFileSelected={handleFileSelected} />
+          {state.message.includes("No tables found") && state.file && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => startUpload(state.file!, true)}
+            >
+              Try text extraction instead
+            </button>
           )}
-
-          {state.step === "processing" && (
-            <Progress
-              filename={state.filename}
-              pagesProcessed={state.status?.pages_processed ?? null}
-              totalPages={state.status?.total_pages ?? null}
-            />
-          )}
-
-          {state.step === "result" && (
-            <Result
-              filename={state.data.filename}
-              rowCount={state.data.row_count ?? 0}
-              totalPages={state.data.total_pages ?? 0}
-              jobId={state.jobId}
-              emailState={state.emailState}
-              onReset={handleReset}
-              onSendEmail={handleSendEmail}
-            />
-          )}
-
-          {state.step === "error" && (
-            <div className="error-panel">
-              <div className="error-badge">Conversion stopped</div>
-              <h2>{state.message}</h2>
-              <p>
-                Try another PDF or rerun the same file with text extraction if the document is text-heavy.
-              </p>
-              {state.message.includes("No tables found") && state.file && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => startUpload(state.file!, true)}
-                >
-                  Try text extraction instead
-                </button>
-              )}
-              <button type="button" className="primary-button" onClick={handleReset}>
-                Upload a different file
-              </button>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+          <button type="button" className="primary-button" onClick={handleReset}>
+            Upload a different file
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

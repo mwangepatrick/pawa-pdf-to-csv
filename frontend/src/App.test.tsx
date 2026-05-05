@@ -1,9 +1,26 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
-import App from "./App";
+import React from 'react';
+import { render } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import App from './App';
 
-test("renders branded landing copy", () => {
-  render(<App />);
-  expect(screen.getByRole("heading", { name: /pdf to csv/i })).toBeInTheDocument();
-  expect(screen.getByText(/delivered by email/i, { selector: ".hero-copy" })).toBeInTheDocument();
+vi.mock('./api/client', () => ({
+  uploadPdf: vi.fn(),
+  pollStatus: vi.fn(),
+  sendEmail: vi.fn(),
+}));
+
+vi.mock('./components/TurnstileWidget', () => ({
+  default: () => <div data-testid="turnstile-mock" />,
+}));
+
+describe('App layout', () => {
+  it('does not render a hero-panel', () => {
+    render(<App />);
+    expect(document.querySelector('.hero-panel')).toBeNull();
+  });
+
+  it('renders the workspace-panel', () => {
+    render(<App />);
+    expect(document.querySelector('.workspace-panel')).not.toBeNull();
+  });
 });
